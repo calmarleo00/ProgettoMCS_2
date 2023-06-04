@@ -1,3 +1,6 @@
+import csv
+import time
+from datetime import datetime
 import numpy as np
 import scipy as sp
 import math
@@ -6,8 +9,9 @@ from scipy.fftpack import dct, idct
 from numpy import double
 
 
-def dct2(a):
+def lib_dct2(a):
     return dct(dct(a.T, norm='ortho').T, norm='ortho')
+
 
 
 def cos_series(N, frequence):
@@ -30,21 +34,8 @@ def summatory_b(matrixA, dim, s, r):
             math.cos(s * math.pi * ((2 * i + 1) / (2 * dim)))))
     return sum
 
-
-if __name__ == "__main__":
-    dimension = 8
-    # matrixA = np.mat('[1 2; 3 4]')
-    matrixA = np.mat('[231 32 233 161 24 71 140 245;'
-                     '247 40 248 245 124 204 36 107;'
-                     '234 202 245 167 9 217 239 173;'
-                     '193 190 100 167 43 180 8 70;'
-                     '11 24 210 177 81 243 8 112;'
-                     '97 195 203 47 125 114 165 181;'
-                     '193 70 174 167 41 30 127 245;'
-                     '87 149 57 192 65 129 178 228]')
-    array_W = []
+def dct2(dimension, matrixA):
     matrixRes = np.ndarray(shape=(dimension, dimension))
-    vectorRes = np.ndarray(shape=(1, dimension))
 
     iteration = 0
     row = 0
@@ -61,12 +52,42 @@ if __name__ == "__main__":
         row = row + 1
         col = 0
 
-    print("DCT2:\n")
-    print(str(matrixRes))
+    return matrixRes
+if __name__ == "__main__":
+    #dimension = 8
+    '''
+    matrixA = np.mat('[231 32 233 161 24 71 140 245;'
+                     '247 40 248 245 124 204 36 107;'
+                     '234 202 245 167 9 217 239 173;'
+                     '193 190 100 167 43 180 8 70;'
+                     '11 24 210 177 81 243 8 112;'
+                     '97 195 203 47 125 114 165 181;'
+                     '193 70 174 167 41 30 127 245;'
+                     '87 149 57 192 65 129 178 228]')
+    '''
+    header = ['dimensione', 'dct2', 'lib_dct2']
+    with open('DCT2.csv', 'w', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f)
 
-    print("Library's DCT2:\n")
-    imF = dct2(matrixA)
-    print(imF)
+        # write the header
+        writer.writerow(header)
+
+        for i in range(2, 50):
+            matrixA = np.random.randint(1, 300, (i,i), dtype = int)
+            start_dct2 = time.perf_counter()
+            matrixRes = dct2(i, matrixA)
+            end_dct2 = time.perf_counter()
+            dct2_time = end_dct2 - start_dct2
+            print(dct2_time)
+            start_lib_dct2 = time.perf_counter()
+            imF = dct(dct(matrixA.T, norm='ortho').T, norm='ortho')
+            end_lib_dct2 = time.perf_counter()
+            lib_dct2_time = end_lib_dct2 - start_lib_dct2
+
+            writer.writerow([i, dct2_time, lib_dct2_time])
+
+
+
 
 
 
