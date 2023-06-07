@@ -8,10 +8,11 @@ from scipy.fftpack import dct, idct
 
 from numpy import double
 
+global array_w
+
 
 def lib_dct2(a):
     return dct(dct(a.T, norm='ortho').T, norm='ortho')
-
 
 
 def cos_series(N, frequence):
@@ -22,7 +23,13 @@ def cos_series(N, frequence):
     return w
 
 
+def our_dct(v, frequence):
+    global array_w
+    return (v.dot(array_w[frequence])) * math.sqrt(1 / (np.transpose(array_w[frequence]).dot(array_w[frequence])))
+
+
 def summatory_b(matrixA, dim, s, r):
+    global array_w
     sum = 0
     for i in range(0, dim):
         sum_j = 0
@@ -30,11 +37,13 @@ def summatory_b(matrixA, dim, s, r):
             sum_j = sum_j + (matrixA[i, j] *
                              math.cos(r * math.pi * (((2 * j) + 1) /
                                                      (2 * dim))))
-        sum = sum + (math.sqrt(1 / (np.transpose(cos_series(dim, r)).dot(cos_series(dim, r)))) * sum_j * (
-            math.cos(s * math.pi * ((2 * i + 1) / (2 * dim)))))
+        sum = sum + (math.sqrt(1 / np.transpose(array_w[r]).dot(array_w[r]))) * sum_j * (
+            math.cos(s * math.pi * ((2 * i + 1) / (2 * dim))))
     return sum
 
+
 def dct2(dimension, matrixA):
+    global array_w
     matrixRes = np.ndarray(shape=(dimension, dimension))
 
     iteration = 0
@@ -44,7 +53,7 @@ def dct2(dimension, matrixA):
     while row < dimension:
         while col < dimension:
             matrixRes[row, col] = math.sqrt(
-                1 / (np.transpose(cos_series(dimension, row)).dot(cos_series(dimension, row)))) * \
+                1 / (np.transpose(array_w[row]).dot(array_w[row]))) * \
                                   (summatory_b(matrixA, dimension, row, col))
 
             iteration = iteration + 1
@@ -53,9 +62,9 @@ def dct2(dimension, matrixA):
         col = 0
 
     return matrixRes
+
+
 if __name__ == "__main__":
-    #dimension = 8
-    '''
     matrixA = np.mat('[231 32 233 161 24 71 140 245;'
                      '247 40 248 245 124 204 36 107;'
                      '234 202 245 167 9 217 239 173;'
@@ -64,30 +73,27 @@ if __name__ == "__main__":
                      '97 195 203 47 125 114 165 181;'
                      '193 70 174 167 41 30 127 245;'
                      '87 149 57 192 65 129 178 228]')
-    '''
-    header = ['dimensione', 'dct2', 'lib_dct2']
-    with open('DCT2.csv', 'w', encoding='UTF8', newline='') as f:
-        writer = csv.writer(f)
 
-        # write the header
-        writer.writerow(header)
+    # matrixA = np.random.randint(0, 255, (i, i), dtype=int)
 
-        for i in range(2, 50):
-            matrixA = np.random.randint(1, 300, (i,i), dtype = int)
-            start_dct2 = time.perf_counter()
-            matrixRes = dct2(i, matrixA)
-            end_dct2 = time.perf_counter()
-            dct2_time = end_dct2 - start_dct2
-            print(dct2_time)
-            start_lib_dct2 = time.perf_counter()
-            imF = dct(dct(matrixA.T, norm='ortho').T, norm='ortho')
-            end_lib_dct2 = time.perf_counter()
-            lib_dct2_time = end_lib_dct2 - start_lib_dct2
+    array_w = []
+    matrix_inter = np.ndarray(shape=(matrixA.shape[0], matrixA.shape[1]))
+    matrixRes = np.ndarray(shape=(matrixA.shape[0], matrixA.shape[1]))
+    start_dct2 = time.time_ns()
+    for dim in range(0, matrixA.shape[0]):
+        array_w.append(cos_series(matrixA.shape[0], dim))
+    for row in range(matrixA.shape[0]):
+        for col in range(matrixA.shape[1]):
+            matrix_inter[row, col] = our_dct(matrixA[row, :], col)
+    for col in range(matrixA.shape[1]):
+        for row in range(matrixA.shape[0]):
+            matrixRes[row, col] = our_dct(matrix_inter[:, col], row)
+    end_dct2 = time.time_ns()
+    dct2_time = end_dct2 - start_dct2
+    print("Our DCT2 time: " + str(dct2_time))
 
-            writer.writerow([i, dct2_time, lib_dct2_time])
-
-
-
-
-
-
+    start_lib_dct2 = time.time_ns()
+    imF = dct(dct(matrixA.T, norm='ortho').T, norm='ortho')
+    end_lib_dct2 = time.time_ns()
+    lib_dct2_time = end_lib_dct2 - start_lib_dct2
+    print("Library's DCT2 time: " + str(lib_dct2_time))
