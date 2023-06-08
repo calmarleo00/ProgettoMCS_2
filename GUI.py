@@ -1,3 +1,5 @@
+import csv
+
 from scipy.fftpack import dct, idct
 from tkinter import *
 from tkinter import filedialog, ttk
@@ -6,7 +8,7 @@ from PIL import ImageTk, Image
 from ttkthemes import ThemedTk
 
 global file_path, left_image_container, right_image_container, resized_image, image_array, left_image_size, \
-right_image_size, image
+right_image_size, image, compressed_image
 
 
 class ImageManager:
@@ -50,6 +52,7 @@ class ImageManager:
         main_image_resized = self.resize_image(image, right_image_size, right_image_size)
         self.set_image(main_image_resized, right_image_container)
 
+        #write_csv("c_original.csv", image_array)
         if image.width > image.height:
             max_scale_f = image.height
         else:
@@ -72,7 +75,7 @@ class ImageManager:
             args[len(args) - 1].set(int(scaling))
 
     def compress(self, image_array, right_image_container, f_scaling, d_scaling):
-        global right_image_size
+        global right_image_size, compressed_image
         if f_scaling != 1:
             f_scaling = int(f_scaling)
             d_scaling = int(d_scaling)
@@ -91,7 +94,6 @@ class ImageManager:
                         if row + col >= d_scaling:
                             array_split[i][row, col] = 0
                 array_split[i] = self.idct2(array_split[i])
-
             n_blocks_rows = int(image_array.shape[0] / f_scaling)
             n_blocks_cols = int(image_array.shape[1] / f_scaling)
             i = 0
@@ -111,11 +113,13 @@ class ImageManager:
             # for i in range (image_result.shape[1] - extra_col, image_result.shape[1]):
             #    image_result[:,i] = image_result[:,image_result.shape[1] - extra_col - 1]
 
-            image = Image.fromarray(image_result)
-            main_image_resized = self.resize_image(image, right_image_size, right_image_size)
+            compressed_image = Image.fromarray(image_result)
+            main_image_resized = self.resize_image(compressed_image, right_image_size, right_image_size)
             main_image = ImageTk.PhotoImage(main_image_resized)
             right_image_container.configure(image=main_image)
             right_image_container.image = main_image
+
+            #write_csv("c_compressed.csv", image_result)
 
     def split(self, matrix, scaling):
         f_scaling = int(scaling)
@@ -137,10 +141,16 @@ class ImageManager:
                 array_split.append(tmp)
         return array_split
 
-
+def write_csv(filename, matrix):
+    #with open(filename, 'w', encoding='UTF8', newline='') as f:
+    #    writer = csv.writer(f)
+    #    writer.writerow(matrix)
+    #f.close()
+    np.savetxt(filename, matrix, fmt='%i', delimiter=",")
 class GUI:
     def main_loop(self):
-        global image, resized_image, image_array, left_image_size, right_image_size, max_scale_d, file_path, d_scaling
+        global image, resized_image, image_array, left_image_size, right_image_size, max_scale_d, file_path, \
+        d_scaling, compressed_image
         filepath = ""
         left_image_size = 400
         right_image_size = 600
@@ -185,16 +195,15 @@ class GUI:
         original_name = ttk.Label(left_frame, text="Immagine originale")
         original_name.grid(row=0, column=0, columnspan=3)
 
-        image = Image.open('C:/Users/delfi/PycharmProjects/Progetto_MCS2/deer.bmp').convert('L')
-        #image = Image.new("L", (512, 512), "black")
+
+        image = Image.new("L", (512, 512), "black")
 
         if image.width > image.height:
             max_scale_f = image.height
         else:
             max_scale_f = image.width
 
-        image_array = np.asarray(image)
-        #image_array = []
+        image_array = []
 
         original_image = ImageTk.PhotoImage(imageManager.resize_image(image, left_image_size, left_image_size))
         left_image_container = ttk.Label(left_frame, image=original_image)
@@ -236,6 +245,10 @@ class GUI:
                    command=lambda: imageManager.compress(image_array, right_image_container, f_scaling.get(),
                                                          d_scaling.get())
                    ).grid(row=5, column=0, columnspan=3, sticky="n")
+        ttk.Button(left_frame, text="Salva",
+                   command=lambda: compressed_image.convert('L').save("compressed_image.bmp")).grid(row=6, column=0,
+                                                                                                    columnspan=3,
+                                                                                                    sticky="n")
         root.mainloop()
 
 
