@@ -1,4 +1,5 @@
 import csv
+import tkinter
 
 from scipy.fftpack import dct, idct
 from tkinter import *
@@ -52,7 +53,7 @@ class ImageManager:
         main_image_resized = self.resize_image(image, right_image_size, right_image_size)
         self.set_image(main_image_resized, right_image_container)
 
-        #write_csv("c_original.csv", image_array)
+        #write_csv("Excel/c_original.csv", image_array)
         if image.width > image.height:
             max_scale_f = image.height
         else:
@@ -89,11 +90,20 @@ class ImageManager:
             array_split = self.split(image_array, f_scaling)
             for i in range(len(array_split)):
                 array_split[i] = self.dct2(array_split[i])
+            #write_csv("Excel/c_dct2.csv", array_split[0])
+
+            for i in range(len(array_split)):
                 for row in range(array_split[i].shape[0]):
                     for col in range(array_split[i].shape[1]):
                         if row + col >= d_scaling:
                             array_split[i][row, col] = 0
+            #write_csv("Excel/c_truncated.csv", array_split[0])
+
+            for i in range(len(array_split)):
                 array_split[i] = self.idct2(array_split[i])
+
+            #write_csv("Excel/c_idct2.csv", array_split[0])
+
             n_blocks_rows = int(image_array.shape[0] / f_scaling)
             n_blocks_cols = int(image_array.shape[1] / f_scaling)
             i = 0
@@ -119,7 +129,7 @@ class ImageManager:
             right_image_container.configure(image=main_image)
             right_image_container.image = main_image
 
-            #write_csv("c_compressed.csv", image_result)
+            #write_csv("Excel/c_compressed.csv", image_result)
 
     def split(self, matrix, scaling):
         f_scaling = int(scaling)
@@ -141,12 +151,6 @@ class ImageManager:
                 array_split.append(tmp)
         return array_split
 
-def write_csv(filename, matrix):
-    #with open(filename, 'w', encoding='UTF8', newline='') as f:
-    #    writer = csv.writer(f)
-    #    writer.writerow(matrix)
-    #f.close()
-    np.savetxt(filename, matrix, fmt='%i', delimiter=",")
 class GUI:
     def main_loop(self):
         global image, resized_image, image_array, left_image_size, right_image_size, max_scale_d, file_path, \
@@ -158,7 +162,15 @@ class GUI:
 
         imageManager = ImageManager()
         # CREATE WINDOW
-        root = ThemedTk(theme='black')
+        #root = ThemedTk(theme='black')
+        root = tkinter.Tk()
+        style = ttk.Style(root)
+        root.tk.call("source", "Azure-ttk-theme-2.1.0/azure.tcl")
+        root.tk.call("set_theme", "dark")
+        print(style.theme_names())
+        style.theme_use('azure-dark')
+        #style.configure("azure-dark.TLabel", background="#000000")
+
         root.title("Compressione di immagini")
         root.state("zoomed")  # Permette alla finestra di partire a schermo intero
         # style = ttkthemes.ThemedStyle(root)
@@ -167,16 +179,16 @@ class GUI:
         screen_height = root.winfo_screenheight()
         root.minsize(screen_width, screen_height)  # Impostiamo la grandezza minima
 
-        root.config(bg="#000000")  # specify background color
+        #root.config(bg="#000000")  # specify background color
 
         root.columnconfigure(0, weight=1)  # impostazione griglia
         root.columnconfigure(1, weight=3)
 
         root.rowconfigure(0, weight=3)
         # Create left and right frames
-        left_frame = Frame(root, bg='#333333')
+        left_frame = ttk.Frame(root, style='azure-dark.TLabel')
         left_frame.grid(row=0, column=0, sticky="nsew", pady=20)
-        right_frame = Frame(root, bg='#333333')
+        right_frame = ttk.Frame(root)
         right_frame.grid(row=0, column=1, sticky="nsew", pady=20)
 
         left_frame.columnconfigure(0, weight=0)
@@ -189,11 +201,14 @@ class GUI:
         left_frame.rowconfigure(4, weight=1)
         left_frame.rowconfigure(5, weight=1)
 
-        right_frame.rowconfigure(0, weight=3)
-        right_frame.columnconfigure(0, weight=3)
+        right_frame.rowconfigure(0, weight=1)
+        right_frame.rowconfigure(1, weight=4)
+        right_frame.columnconfigure(0, weight=1)
         # Create frames and labels in left_frame
-        original_name = ttk.Label(left_frame, text="Immagine originale")
-        original_name.grid(row=0, column=0, columnspan=3)
+        original_name = ttk.Label(left_frame, text="Immagine originale",
+                                  font=("-family", "Segoe Ui", "-size", 15, "-weight", "bold"),
+                                  foreground="#FFFFFF", borderwidth=5, relief="raised", anchor="center")
+        original_name.grid(row=0, column=0, columnspan=3, sticky="ns")
 
 
         image = Image.new("L", (512, 512), "black")
@@ -211,31 +226,33 @@ class GUI:
         left_image_container.image = original_image
 
         # resize image
+        ttk.Label(right_frame, text="Immagine compressa", font=("-family", "Segoe Ui", "-size", 15, "-weight", "bold"),
+                  foreground="#FFFFFF", borderwidth=5, relief="raised", anchor="center").grid(row=0, sticky="ns")
         main_image = ImageTk.PhotoImage(imageManager.resize_image(image, right_image_size, right_image_size))
         right_image_container = ttk.Label(right_frame, image=main_image)
-        right_image_container.grid(row=0, column=0)
+        right_image_container.grid(row=1, column=0)
         right_image_container.image = main_image
 
         ttk.Button(left_frame, text="Seleziona immagine", command=lambda:
         imageManager.change_image(f_scaling, left_image_container, right_image_container)
                    ).grid(row=2, column=0, sticky="n", columnspan=3)
 
-        ttk.Label(left_frame, text="F: ").grid(row=3, column=0)
+        ttk.Label(left_frame, text="F: ", font=("-family", "Segoe Ui", "-size", 12)).grid(row=3, column=0)
 
         f_value = IntVar(value=1)
         f_scaling = ttk.Scale(left_frame, from_=1, to=max_scale_f, orient=HORIZONTAL, length=left_image_size,
                               variable=f_value)
         f_scaling.grid(row=3, column=1)
 
-        ttk.Entry(left_frame, textvariable=f_value, width=7).grid(row=3, column=2)
+        ttk.Entry(left_frame, textvariable=f_value, width=7).grid(row=3, column=2, sticky="e")
 
-        ttk.Label(left_frame, text="d: ").grid(row=4, column=0)
+        ttk.Label(left_frame, text="d: ", font=("-family", "Segoe Ui", "-size", 12)).grid(row=4, column=0)
 
         d_value = IntVar(value=0)
         d_scaling = ttk.Scale(left_frame, from_=0, to=max_scale_d, orient=HORIZONTAL, length=left_image_size,
                               variable=d_value)
         d_scaling.grid(row=4, column=1)
-        ttk.Entry(left_frame, textvariable=d_value, width=7).grid(row=4, column=2)
+        ttk.Entry(left_frame, textvariable=d_value, width=7).grid(row=4, column=2, sticky="e")
 
         f_value.trace(mode="w", callback=lambda *args, ds=d_scaling, f_value=f_value, d_value=d_value: [
             imageManager.set_max_scale_d(*args, ds, f_value, d_value),
@@ -244,11 +261,11 @@ class GUI:
         ttk.Button(left_frame, text="Comprimi",
                    command=lambda: imageManager.compress(image_array, right_image_container, f_scaling.get(),
                                                          d_scaling.get())
-                   ).grid(row=5, column=0, columnspan=3, sticky="n")
+                   ).grid(row=5, column=1, columnspan=2, sticky="w")
         ttk.Button(left_frame, text="Salva",
-                   command=lambda: compressed_image.convert('L').save("compressed_image.bmp")).grid(row=6, column=0,
-                                                                                                    columnspan=3,
-                                                                                                    sticky="n")
+                   command=lambda: compressed_image.convert('L').save(
+                       tkinter.filedialog.asksaveasfilename(defaultextension=".bmp", filetypes=(("Image BMP", "*.bmp"),)))
+                   ).grid(row=5, column=1, columnspan=2, sticky="e")
         root.mainloop()
 
 
